@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>PlantPal - Smart Plant Reminder</title>
+  <style>
+    :root {
+      --primary-color: #4CAF50;
+      --light-bg: #f0f4f5;
+      --dark-bg: #121212;
+      --dark-container: #1e1e1e;
+      --card-bg: #e8f5e9;
+      --card-dark-bg: #2b2b2b;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 0;
+      background: var(--light-bg);
+      color: #333;
+      transition: background 0.3s, color 0.3s;
+    }
+
+    header {
+      background: var(--primary-color);
+      color: white;
+      text-align: center;
+      padding: 1rem;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    header button {
+      background: white;
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 5px;
+      cursor: pointer;
+      font-weight: bold;
+      color: var(--primary-color);
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 2rem auto;
+      padding: 2rem;
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+      transition: background 0.3s;
+    }
+
+    h2 {
+      color: var(--primary-color);
+      border-bottom: 2px solid #c8e6c9;
+      padding-bottom: 0.3rem;
+    }
+
+    input, select, button {
+      margin: 0.5rem 0;
+      padding: 0.6rem;
+      width: 100%;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 1rem;
+    }
+
+    button {
+      background-color: var(--primary-color);
+      color: white;
+      font-weight: bold;
+      border: none;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+
+    button:hover {
+      background-color: #45a049;
+    }
+
+    .plant-card {
+      background: var(--card-bg);
+      border-left: 4px solid var(--primary-color);
+      padding: 1rem;
+      margin: 1.5rem 0;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+      transition: background 0.3s;
+    }
+
+    .plant-card img {
+      max-width: 120px;
+      display: block;
+      margin-top: 10px;
+      border-radius: 6px;
+    }
+
+    .dark-mode {
+      background: var(--dark-bg);
+      color: #fff;
+    }
+
+    .dark-mode .container {
+      background: var(--dark-container);
+    }
+
+    .dark-mode .plant-card {
+      background: var(--card-dark-bg);
+    }
+
+    .dark-mode input,
+    .dark-mode select,
+    .dark-mode button {
+      background: #333;
+      color: white;
+      border: 1px solid #555;
+    }
+
+    .dark-mode button:hover {
+      background: #388e3c;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>PlantPal 🌿</h1>
+    <button onclick="toggleDarkMode()">Toggle Dark Mode</button>
+  </header>
+
+  <div class="container">
+    <h2>Add Your Plant</h2>
+    <input type="text" id="plantName" placeholder="Plant Name">
+    <select id="plantType">
+      <option value="Flower">Flower</option>
+      <option value="Herb">Herb</option>
+      <option value="Vegetable">Vegetable</option>
+    </select>
+    <input type="url" id="plantImage" placeholder="Image URL (optional)">
+    <input type="number" id="wateringDays" placeholder="Water every (days)">
+    <button onclick="addPlant()">Add Plant</button>
+
+    <h2>My Plants</h2>
+    <div id="plantList"></div>
+  </div>
+
+  <script>
+    let plants = JSON.parse(localStorage.getItem("plants")) || [];
+
+    function addPlant() {
+      const name = document.getElementById("plantName").value;
+      const type = document.getElementById("plantType").value;
+      const image = document.getElementById("plantImage").value;
+      const days = document.getElementById("wateringDays").value;
+      const today = new Date().toISOString().split('T')[0];
+
+      if (!name || !days) return alert("Please fill all required fields.");
+
+      plants.push({ name, type, image, days: Number(days), lastWatered: today });
+      localStorage.setItem("plants", JSON.stringify(plants));
+      renderPlants();
+    }
+
+    function renderPlants() {
+      const list = document.getElementById("plantList");
+      list.innerHTML = "";
+
+      plants.forEach((plant, index) => {
+        const nextWater = getNextWaterDate(plant.lastWatered, plant.days);
+        const card = document.createElement("div");
+        card.className = "plant-card";
+        card.innerHTML = `
+          <strong>${plant.name}</strong> (${plant.type})<br>
+          Last Watered: ${plant.lastWatered}<br>
+          Next Watering: ${nextWater}<br>
+          ${plant.image ? `<img src="${plant.image}" alt="${plant.name}">` : ""}<br>
+          <button onclick="waterNow(${index})">Water Now</button>
+          <button onclick="showTips('${plant.type}')">Care Tips</button>
+        `;
+        list.appendChild(card);
+      });
+    }
+
+    function waterNow(index) {
+      plants[index].lastWatered = new Date().toISOString().split('T')[0];
+      localStorage.setItem("plants", JSON.stringify(plants));
+      renderPlants();
+    }
+
+    function getNextWaterDate(lastDate, days) {
+      const date = new Date(lastDate);
+      date.setDate(date.getDate() + days);
+      return date.toISOString().split('T')[0];
+    }
+
+    function showTips(type) {
+      const tips = {
+        Flower: "Needs sunlight and regular trimming.",
+        Herb: "Keep in indirect sunlight. Water gently.",
+        Vegetable: "Requires good drainage and daily monitoring."
+      };
+      alert(tips[type] || "General care needed.");
+    }
+
+    function toggleDarkMode() {
+      document.body.classList.toggle("dark-mode");
+    }
+
+    renderPlants();
+  </script>
+</body>
+</html>
